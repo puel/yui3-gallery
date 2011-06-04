@@ -48,6 +48,11 @@ DataBinding.DefaultBinding = {
         input_radio: 'click',
         select: 'change',
         textarea: 'change'
+    },
+    
+    Converter : {
+        // converts a string to a boolean value
+        input_checkbox: function(value) {return 'true' == value || 'TRUE' == value;}
     }
 };
     
@@ -101,7 +106,7 @@ Y.extend(DataBinding, Base, {
         this.publish(DataBinding.Event.NewValueSet, {emitFacade: true,
                 defaultFn: this._refreshWidgetsHandler, context: this});
         this.publish(DataBinding.Event.NodeToBindFound, {emitFacade: true,
-            defaultFn: function(e) {this.bind(e.node)}, context: this});
+            defaultFn: function(e) {this.bind(e.node);}, context: this});
     },
     /**
      * @private
@@ -146,7 +151,7 @@ Y.extend(DataBinding, Base, {
     bind: function (element) {
         if (Lang.isString(element)) {
             element = Y.one(element);
-            if (node == null) {
+            if (!element) {
                 Y.log("Couldn't find any node with selector: " + element, "warn", DataBinding.NAME);
                 return null;
             }
@@ -157,11 +162,11 @@ Y.extend(DataBinding, Base, {
             var nodeInfo = NodeUtils.inspectNode(element);
             if (nodeInfo) {
                 var attribute = nodeInfo.node.getAttribute('bindAttribute'),
-                    bindEvent = nodeInfo.node.getAttribute('bindEvent'),
+                    event = nodeInfo.node.getAttribute('bindEvent'),
                     nodeInfo = NodeUtils.inspectNode(element),
                     nodeName = nodeInfo.nodeName,
                     nodeType = nodeInfo.nodeType,
-                    event = null;
+                    converter = null;
                 // replace the node with the widget
                 if (nodeInfo.widget) {
                     element = nodeInfo.widget;
@@ -176,6 +181,8 @@ Y.extend(DataBinding, Base, {
                     if (!event) event = DataBinding.DefaultBinding.Events[nodeName];
                     if (!attribute) attribute = DataBinding.DefaultBinding.Attributes[nodeType];
                     if (!attribute) attribute = DataBinding.DefaultBinding.Attributes[nodeName];
+                    converter = DataBinding.DefaultBinding.Converter[nodeType];
+                    if (!converter) converter = DataBinding.DefaultBinding.Converter[nodeName];
                 } else if (nodeInfo.widget) {
                     Y.log('Widget binding detected. ' + nodeInfo.widget.getClassName(), 'debug', DataBinding.NAME);
                 } else {
@@ -186,7 +193,7 @@ Y.extend(DataBinding, Base, {
                     attribute = 'innerHTML';
                 }
 
-                this.bindProperty(element, attribute, bindingPath, event);
+                this.bindProperty(element, attribute, bindingPath, event, converter);
             } else {
                 Y.log("bind: failed for element: " + element, "warn", DataBinding.NAME);
             }
@@ -202,8 +209,9 @@ Y.extend(DataBinding, Base, {
      * @param {String} property the property which is accessable with get and set
      * @param {String} path the path to use in the DS
      * @param {String} event the event to listen too, empty string "" - read only binding
+     * @param {Function} converter a value converter function if needed, executed on set
      */
-    bindProperty: function(element, property, path, event){
+    bindProperty: function(element, property, path, event, converter){
         if (element && Lang.isString(property) && Lang.isString(path) && (!event || Lang.isString(event))) {
             var domain = PropertyUtils.pathStart(path),
                 i = new BindingItem({
@@ -211,6 +219,7 @@ Y.extend(DataBinding, Base, {
                 property: property,
                 path: path,
                 event: event,
+                converter: converter,
                 binding: this
             });
             if (!this._bindingMap[domain]) {
@@ -218,6 +227,7 @@ Y.extend(DataBinding, Base, {
             }
 
             this._bindingMap[domain].push(i);
+
             Y.log('Binding: '
                 + ' element--> ' + element
                 + ' property--> ' + property
@@ -301,7 +311,7 @@ Y.extend(DataBinding, Base, {
             Y.log('Updateting--> ' + bindings.length + ' widgets for path--> ' + e.path, 'debug', DataBinding.NAME);
             for (var i = bindings.length - 1; i >= 0; i--){
                 binding = bindings[i];
-                if (binding.get('path') === e.path) {
+                if (binding.get('path') === e.path && bindingToIgnore != binding) {
                     binding.updateElement(e.value);
                 }
             };

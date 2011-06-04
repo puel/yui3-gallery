@@ -38,7 +38,9 @@ NodeUtils.inspectNode = function(node) {
  * @param {String} name the property name
  */
 NodeUtils.getNormalizedValue = function(node, name) {
-    if (!node) return null;
+    if (!node) {
+        return null;
+    }
     
     var value = node.get(name);
     if (Y.Lang.isString(value)) {

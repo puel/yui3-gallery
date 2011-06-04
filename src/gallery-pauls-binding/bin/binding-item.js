@@ -12,13 +12,26 @@ Y.namespace('Binding');
  * a destroy propery - which allows us later to act more correct.
  * 
  * @param {Object} config
+ * @class BindingItem
+ * @namespace Y.Binding
+ * @constructor
+ * 
+ * @param element The element we bind.
+ * @param property The property to read - bind
+ * @param path the path to use
  */ 
 function BindingItem(config){
     BindingItem.superclass.constructor.apply(this, arguments);
 };
 BindingItem.NAME = "binding-item";
 BindingItem.ATTRS = {
-    /** the element we bind */
+    /** 
+     * The element we bind.
+     * 
+     * @type Node|Base
+     * @default null
+     * @attribute element
+     */
     element: {
         value: null,
         setter: function(value){
@@ -28,18 +41,47 @@ BindingItem.ATTRS = {
             return value;
         }
     },
+    /**
+     * The property to read - bind
+     * 
+     * @type String
+     * @default null
+     * @attribute property
+     */
     property: {
         value: null,
         validator: Lang.isString
     },
+    /**
+     * The path in the binding widget to popualte
+     * 
+     * @type String
+     * @default null
+     * @attribute path
+     */
     path: {
         value: null,
         validator: Lang.isString
     },
+    /**
+     * The event to react on to harvest any changes from the bind element
+     * 
+     * @type String
+     * @default null
+     * @attribute event
+     */
     event: {
         value: null,
         validator: Lang.isString
     },
+    /**
+     * Each binding may have a converter
+     * 
+     * @type Function
+     * @default null
+     * @attribute converter
+     */
+    converter: {value: null, validator: Lang.isFunction},
     /** 
      * YUI bind handle, used in the detach method.
      * As YUI still does not correctly detach events we need to store the
@@ -47,7 +89,7 @@ BindingItem.ATTRS = {
      * 
      * @type Object
      * @default null
-     * @attribute oData
+     * @attribute handle
      */
     handle: {
         value: null
@@ -91,15 +133,20 @@ Y.extend(BindingItem, Y.Base, {
         // first we detach - as we do not want to react on any changes right now
         this.detach();
         var element = this.get('element'),
-            property = this.get('property');
+            property = this.get('property'),
+            converter = this.get('converter');
+            
+        if (converter) {
+            value = converter(value, element, this);
+        }
 
-        if (element instanceof Node) {
+        if (element instanceof Y.Node) {
             if (!Lang.isValue(value)) {
                 value = "";
             } else {
-                // TODO escape for innerHTML
-                if (property === 'innerHTML' && value.length > 0 && value.indexOf('<') > 0) {
-                    value.replace('<', '&gt;')
+                // escape for innerHTML - to avoid JS injection
+                if (property === 'innerHTML' && value.length > 0 && value.indexOf('<') >= 0) {
+                    value = value.replace(/</g, '&lt;');
                 }
             }
             // update the element
