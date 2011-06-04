@@ -309,10 +309,17 @@ Y.extend(DataBinding, Base, {
         
         if (Lang.isArray(bindings)) {
             Y.log('Updateting--> ' + bindings.length + ' widgets for path--> ' + e.path, 'debug', DataBinding.NAME);
-            for (var i = bindings.length - 1; i >= 0; i--){
+            for (var i = 0; i < bindings.length; ++i){
                 binding = bindings[i];
-                if (binding.get('path') === e.path && bindingToIgnore != binding) {
-                    binding.updateElement(e.value);
+                if (binding.get('destroyed') === false) {
+                    if (binding.get('path') === e.path && bindingToIgnore != binding) {
+                        binding.updateElement(e.value);
+                    }
+                } else {
+                    // remove it, if it is destroyed.
+                    bindings.splice(i, 1);
+                    --i;
+                    Y.log('Removing destroyed binding. Items left in area: ' + bindings.length, 'debug', DataBinding.NAME);
                 }
             };
         }

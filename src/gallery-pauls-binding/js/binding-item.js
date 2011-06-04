@@ -22,7 +22,7 @@ Y.namespace('Binding');
  */ 
 function BindingItem(config){
     BindingItem.superclass.constructor.apply(this, arguments);
-};
+}
 BindingItem.NAME = "binding-item";
 BindingItem.ATTRS = {
     /** 
@@ -99,6 +99,28 @@ BindingItem.ATTRS = {
     }
 };
 Y.extend(BindingItem, Y.Base, {
+    initializer: function(config){
+        try {
+            // TODO: destroy method hook -> as YUI does not correctly always fire the
+            // destroy event e.g. Nodes - so we better instrument the destroy method
+            // this.bind();
+            var element = this.get('element');
+            if (Lang.isFunction(element.destroy)) {
+                Y.Do.before(this.destroy, element, 'destroy', this);
+            } else {
+                Y.log('Do destroy method fond on element-> ' + config.element +
+                    ' no destroy listener attached!', 'warn', BindingItem.NAME);
+            }
+        }  catch (e) {
+            Y.log('failed to create a new binded item ' + e, 'error', BindingItem.NAME);
+        }
+    },
+    destructor: function() {
+        Y.log('Binding destroyed of: ' + this.get('element'), 'debug', BindingItem.NAME);
+        this.detach();
+        this.detachAll();
+    },
+
     /**
      * Executes the binding again - any binding before will be detached.
      */
@@ -111,6 +133,9 @@ Y.extend(BindingItem, Y.Base, {
         }
         return handle;
     },
+    /**
+     * This method detaches us from the managed element again.
+     */
     detach: function(){
         var handle = this.get('handle');
         if (handle) {
@@ -180,18 +205,6 @@ Y.extend(BindingItem, Y.Base, {
             this.get('path'),
             false,
             this);
-    },
-    initializer: function(){
-        try {
-            // TODO: destroy method hook -> as YUI does not correctly always fire the
-            // destroy event e.g. Nodes - so we better instrument the destroy method
-            // this.bind();
-        }  catch (e) {
-            Y.log('failed to create a new binded item ' + e, 'error', BindingItem.NAME);
-        }
-    },
-    destructor: function() {
-        this.detachAll();
     }
 });
 

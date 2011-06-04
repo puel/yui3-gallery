@@ -15,10 +15,11 @@ NodeUtils.inspectNode = function(node) {
         node = Y.one(node);
     }
 
-    var nodeName = NodeUtils.getNormalizedValue(node, 'nodeName');
-    var nodeType = NodeUtils.getNormalizedValue(node, 'type');
-    var isWidget = node.getAttribute('iswidget');
-    var widget = null;
+    var nodeName = NodeUtils.getNormalizedValue(node, 'nodeName'),
+        nodeType = NodeUtils.getNormalizedValue(node, 'type'),
+        isWidget = node.getAttribute('iswidget'),
+        widget = null;
+
     if (isWidget == 'true') widget = Y.Widget.getByNode(node);
     
     if (nodeName) {
