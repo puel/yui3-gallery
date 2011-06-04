@@ -1,0 +1,54 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <title>Insert title here</title>
+        <script src="http://yui.yahooapis.com/3.3.0/build/yui/yui.js" charset="utf-8"></script>
+        <script src="../build_tmp/gallery-pauls-binding-debug.js"></script>
+    </head>
+    <body>
+        <div id="form1">
+            Name: <input id="txtName">
+            Last name: <input bind="person.lastName">
+            Male: <input type="checkbox" bind="person.sex">
+        </div>
+        <hr />
+        <i>Second Inputs bind to the same path - simply as show case</i>
+        <div id="form2">
+            <input bind="person.name">
+            <input bind="person.lastName">
+            <select bind="person.sex">
+                <option value="true">Male</option>
+                <option value="false">Female</option>
+            </select>
+            <button type="button" bind="person.lastName"></button>
+        </div>
+        <hr />
+        <textarea id="all" cols="100" rows="10"></textarea><br>
+        <hr />
+        <b>Path:</b> <span id="path"></span> <b>New value:</b> <span id="newValue"></span>
+        <hr />
+        <script>
+            YUI().use('gallery-pauls-binding', 'dump', function(Y) {
+                Y.log('start ...');
+                var binding = new Y.Binding.DataBinding();
+                // binding anything by hand
+                binding.bindProperty('#txtName', 'value', 'person.name', 'change');
+                
+                // use auto bind
+                binding.bindAll('#form1');
+                binding.bindAll('#form2');
+                
+                // come control values
+                var all = Y.one('#all'), path = Y.one('#path'), newValue = Y.one('#newValue');
+                binding.after(Y.Binding.DataBinding.Event.NewValueSet, function(e) {
+                    all.set('value', Y.dump(binding.getData()));
+                    path.setContent(e.path);
+                    newValue.setContent(e.value);
+                });
+                
+                all.set('value', Y.dump(binding.getData()));
+            });
+        </script>
+    </body>
+</html>
