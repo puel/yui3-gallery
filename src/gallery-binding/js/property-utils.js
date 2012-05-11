@@ -1,10 +1,10 @@
 /**
- * Copyright (c) 2011, Paul Sterl. All rights reserved.
+ * Copyright (c) 2012, Paul Sterl. All rights reserved.
  * Code licensed under the BSD License:
  * http://developer.yahoo.net/yui/license.txt
  */
 var CLASS_NAME = 'PropertyUtils',
-    PropertyUtils = Y.namespace(CLASS_NAME),
+    PropertyUtils = Y.namespace("Binding." + CLASS_NAME),
     Lang = Y.Lang,
     Base = Y.Base,
     Widget = Y.Widget;
@@ -17,7 +17,7 @@ var CLASS_NAME = 'PropertyUtils',
 PropertyUtils.cleanPath = function (path) {
     var result = path;
     if (Y.Lang.isString(path)) {
-        result = path.replace('[', '.').replace(']', '').split('.');
+        result = path.split('.');
     } else {
         // maybe it is already an array?
         if (!Y.Lang.isArray(path)) {

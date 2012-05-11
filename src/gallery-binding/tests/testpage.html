@@ -3,8 +3,8 @@
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <title>Insert title here</title>
-        <script src="http://yui.yahooapis.com/3.3.0/build/yui/yui.js" charset="utf-8"></script>
-        <script src="../build_tmp/gallery-pauls-binding-debug.js"></script>
+        <script src="http://yui.yahooapis.com/3.5.0/build/yui/yui.js" charset="utf-8"></script>
+        <script src="../build_tmp/gallery-binding-debug.js"></script>
     </head>
     <body>
         <div id="form1">
@@ -31,7 +31,7 @@
         <b>Path:</b> <span id="path"></span> <b>New value:</b> <span id="newValue"></span>
         <hr />
         <script>
-            YUI({filter: 'raw'}).use('gallery-pauls-binding', 'dump', 'event', function(Y) {
+            YUI({filter: 'raw'}).use('gallery-binding', 'dump', 'event', function(Y) {
                 Y.log('start ...');
                 var binding = new Y.Binding.DataBinding();
                 // binding anything by hand

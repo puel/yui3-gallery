@@ -1,9 +1,8 @@
 /**
- * Copyright (c) 2011, Paul Sterl. All rights reserved.
+ * Copyright (c) 2012, Paul Sterl. All rights reserved.
  * Code licensed under the BSD License:
  * http://developer.yahoo.net/yui/license.txt
  */
-
 Y.namespace('Binding');
 
 /**
@@ -195,7 +194,7 @@ Y.extend(BindingItem, Y.Base, {
         }
         
         
-        // bin again
+        // bind again
         this.bind();
     },
     

@@ -1,5 +1,10 @@
+/**
+ * Copyright (c) 2012, Paul Sterl. All rights reserved.
+ * Code licensed under the BSD License:
+ * http://developer.yahoo.net/yui/license.txt
+ */
 var CLASS_NAME = 'NodeUtils',
-    NodeUtils = Y.namespace(CLASS_NAME);
+    NodeUtils = Y.namespace("Binding." + CLASS_NAME);
     
 /**
  * Returns the node informations which may be used for further work in the binding
