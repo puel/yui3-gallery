@@ -1,32 +1,7 @@
 YUI.add('gallery-quickedit', function(Y) {
 
 "use strict";
-/**
- * Extensions to the Column class to support QuickEdit.
- *
- * @class Column
- */
 
-/**
- * Stores information for QuickEdit mode:  changed, copyDown, formatter, validation, fn, msg, regex.
- *
- * @attribute quickEdit
- * @type Object or boolean
- */
-Y.Column.ATTRS.quickEdit =
-{
-};
-
-/**
- * Formatter to be used during QuickEdit mode for read-only data.
- *
- * @attribute qeFormatter
- * @type Function
- */
-Y.Column.ATTRS.qeFormatter =
-{
-    validator: Y.Lang.isFunction
-};
 /**
  * <p>The QuickEdit plugin provides a new mode for DataTable where all
  * values in the table can be edited simultaneously, controlled by the
@@ -61,6 +36,9 @@ Y.Column.ATTRS.qeFormatter =
  *
  * <dt>validation</dt><dd>Validation configuration for every field in
  * the column.</dd>
+ *
+ * <dt>copyDown</dt><dd>If true, the top cell in the column will have a
+ * button to copy the value down to the rest of the rows.</dd>
  *
  * </dl>
  *
@@ -104,17 +82,6 @@ Y.Column.ATTRS.qeFormatter =
  *
  * </dl>
  *
- * @module gallery-quickedit
- * @class Y.Plugin.DataTableQuickEdit
- * @constructor
- * @param config {Object} Object literal to set component configuration.
- */
-
-/*
- *
- * <dt>copyDown</dt><dd>If true, the top cell in the column will have a
- * button to copy the value down to the rest of the rows.</dd>
- *
  * <p>Custom QuickEdit Formatters</p>
  *
  * <p>To write a custom cell formatter for QuickEdit mode, you must
@@ -123,19 +90,16 @@ Y.Column.ATTRS.qeFormatter =
  * <pre>
  * function myQuickEditFormatter(o) {
  * &nbsp;&nbsp;var markup =
- * &nbsp;&nbsp;&nbsp;&nbsp;'&lt;input type="text" class="{yiv} quickedit-field quickedit-key:{key}"/&gt;' +
- * &nbsp;&nbsp;&nbsp;&nbsp;Y.Plugin.QuickEdit.error_display_markup;
+ * &nbsp;&nbsp;&nbsp;&nbsp;'&lt;input type="text" class="{yiv} quickedit-field quickedit-key:{key}" value="{value}"/&gt;' +
+ * &nbsp;&nbsp;&nbsp;&nbsp;'{cd}' + Y.Plugin.DataTableQuickEdit.error_display_markup;
  *
- * &nbsp;&nbsp;&nbsp;&nbsp;var qe = o.column.get('quickEdit');
- *
- * &nbsp;&nbsp;&nbsp;&nbsp;o.td.set('innerHTML', Y.Lang.sub(markup, {
- * &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;key: o.column.get('key'),
- * &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;yiv: qe.validation ? (qe.validation.css || '') : ''
- * &nbsp;&nbsp;&nbsp;&nbsp;}));
- *
- * &nbsp;&nbsp;&nbsp;&nbsp;o.td.get('firstChild').value = extractMyEditableValue(o);
- *
- * &nbsp;&nbsp;&nbsp;&nbsp;Y.Plugin.QuickEdit.copyDownFormatter.apply(this, arguments);
+ * &nbsp;&nbsp;var qe = o.column.quickEdit;
+ * &nbsp;&nbsp;return Y.Lang.sub(markup, {
+ * &nbsp;&nbsp;&nbsp;&nbsp;key: o.column.key,
+ * &nbsp;&nbsp;&nbsp;&nbsp;value: o.value.toString().replace(/"/g, '&quot;'),
+ * &nbsp;&nbsp;&nbsp;&nbsp;yiv: qe.validation ? (qe.validation.css || '') : '',
+ * &nbsp;&nbsp;&nbsp;&nbsp;cd: QuickEdit.copyDownFormatter.call(this, o)
+ * &nbsp;&nbsp;});
  * };
  * </pre>
  *
@@ -145,6 +109,13 @@ Y.Column.ATTRS.qeFormatter =
  * <p><code>extractMyEditableValue</code> does not have to be a separate
  * function. The work should normally be done inline in the formatter
  * function, but the name of the sample function makes the point clear.</p>
+ *
+ * @module gallery-quickedit
+ * @namespace Plugin
+ * @class DataTableQuickEdit
+ * @extends Plugin.Base
+ * @constructor
+ * @param config {Object} Object literal to set component configuration.
  */
 function QuickEdit(config)
 {
@@ -168,60 +139,18 @@ QuickEdit.ATTRS =
 	}
 };
 
-var class_re_prefix        = '(?:^|\\s)(?:',
-	class_re_suffix        = ')(?:\\s|$)',
-	quick_edit_re          = /quickedit-key:([^\s]+)/,
+var quick_edit_re          = /quickedit-key:([^\s]+)/,
 	qe_row_status_prefix   = 'quickedit-has',
 	qe_row_status_pattern  = qe_row_status_prefix + '([a-z]+)',
-	qe_row_status_re       = new RegExp(class_re_prefix + qe_row_status_pattern + class_re_suffix),
+	qe_row_status_re       = new RegExp(Y.Node.class_re_prefix + qe_row_status_pattern + Y.Node.class_re_suffix),
 	qe_cell_status_prefix  = 'quickedit-has',
 	qe_cell_status_pattern = qe_cell_status_prefix + '([a-z]+)',
-	qe_cell_status_re      = new RegExp(class_re_prefix + qe_cell_status_pattern + class_re_suffix);
-
-/**
- * <p>Names of supported status values, highest precedence first.  Default:
- * <code>[ 'error', 'warn', 'success', 'info' ]</code></p>
- *
- * <p>This is static because it links to CSS rules that define the
- * appearance of each status type:  .formmgr-has{status}</p>
- *
- * @config YAHOO.widget.QuickEditDataTable.status_order
- * @type {Array}
- * @static
- */
-QuickEdit.status_order =
-[
-	'error',
-	'warn',
-	'success',
-	'info'
-];
-
-function getStatusPrecedence(
-	/* string */    status)
-{
-	for (var i=0; i<QuickEdit.status_order.length; i++)
-	{
-		if (status == QuickEdit.status_order[i])
-		{
-			return i;
-		}
-	}
-
-	return QuickEdit.status_order.length;
-}
-
-function statusTakesPrecendence(
-	/* string */    orig_status,
-	/* string */    new_status)
-{
-	return (!orig_status || getStatusPrecedence(new_status) < getStatusPrecedence(orig_status));
-}
+	qe_cell_status_re      = new RegExp(Y.Node.class_re_prefix + qe_cell_status_pattern + Y.Node.class_re_suffix);
 
 /**
  * The CSS class that marks the container for the error message inside a cell.
  *
- * @property Y.Plugin.QuickEdit.error_text_class
+ * @property Y.Plugin.DataTableQuickEdit.error_text_class
  * @type {String}
  */
 QuickEdit.error_text_class = 'quickedit-message-text';
@@ -229,48 +158,39 @@ QuickEdit.error_text_class = 'quickedit-message-text';
 /**
  * The markup for the container for the error message inside a cell.
  *
- * @property Y.Plugin.QuickEdit.error_display_markup
+ * @property Y.Plugin.DataTableQuickEdit.error_display_markup
  * @type {String}
  */
 QuickEdit.error_display_markup = '<div class="quickedit-message-text"></div>';
 
 /**
+ * The CSS class that marks the "Copy Down" button inside a cell.
+ *
+ * @property Y.Plugin.DataTableQuickEdit.copy_down_button_class
+ * @type {String}
+ */
+QuickEdit.copy_down_button_class = 'quickedit-copy-down';
+
+/**
  * Called with exactly the same arguments as any other cell
  * formatter, this function displays an input field.
  *
- * @method Y.Plugin.QuickEdit.textFormatter
+ * @method textFormatter
  * @static
  */
 QuickEdit.textFormatter = function(o)
 {
-/*
-	var markup =
-		'<input type="text" class="{yiv} quickedit-field quickedit-key:{key}"/>' +
-		QuickEdit.error_display_markup;
-
-	var qe = o.column.get('quickEdit');
-
-	o.td.set('innerHTML', Y.Lang.sub(markup,
-	{
-		key: o.column.get('key'),
-		yiv: qe.validation ? (qe.validation.css || '') : ''
-	}));
-
-	o.td.get('firstChild').value = o.value;
-
-	QuickEdit.copyDownFormatter.apply(this, arguments);
-*/
 	var markup =
 		'<input type="text" class="{yiv} quickedit-field quickedit-key:{key}" value="{value}"/>' +
-		QuickEdit.error_display_markup;
+		'{cd}' + QuickEdit.error_display_markup;
 
-	var qe = o.column.get('quickEdit');
-
+	var qe = o.column.quickEdit;
 	return Y.Lang.sub(markup,
 	{
-		key: o.column.get('key'),
-		yiv: qe.validation ? (qe.validation.css || '') : '',
-		value: o.value || o.value === 0 ? o.value.toString().replace('"', '') : ''
+		key:   o.column.key,
+		value: o.value.toString().replace(/"/g, '&quot;'),
+		yiv:   qe.validation ? (qe.validation.css || '') : '',
+		cd:    QuickEdit.copyDownFormatter.call(this, o)
 	});
 };
 
@@ -278,39 +198,22 @@ QuickEdit.textFormatter = function(o)
  * Called with exactly the same arguments as any other cell
  * formatter, this function displays a textarea field.
  *
- * @method Y.Plugin.QuickEdit.textareaFormatter
+ * @method textareaFormatter
  * @static
  */
 QuickEdit.textareaFormatter = function(o)
 {
-/*
 	var markup =
-		'<textarea class="{yiv} quickedit-field quickedit-key:{key}"/>' +
-		QuickEdit.error_display_markup;
+		'<textarea class="{yiv} quickedit-field quickedit-key:{key}">{value}</textarea>' +
+		'{cd}' + QuickEdit.error_display_markup;
 
-	var qe = o.column.get('quickEdit');
-
-	o.td.set('innerHTML', Y.Lang.sub(markup,
-	{
-		key: o.column.get('key'),
-		yiv: qe.validation ? (qe.validation.css || '') : ''
-	}));
-
-	o.td.get('firstChild').value = o.value;
-
-	QuickEdit.copyDownFormatter.apply(this, arguments);
-*/
-	var markup =
-		'<textarea class="{yiv} quickedit-field quickedit-key:{key}" value="{value}"/>' +
-		QuickEdit.error_display_markup;
-
-	var qe = o.column.get('quickEdit');
-
+	var qe = o.column.quickEdit;
 	return Y.Lang.sub(markup,
 	{
-		key: o.column.get('key'),
-		yiv: qe.validation ? (qe.validation.css || '') : '',
-		value: o.value || o.value === 0 ? o.value.toString().replace('"', '') : ''
+		key:   o.column.key,
+		value: o.value,
+		yiv:   qe.validation ? (qe.validation.css || '') : '',
+		cd:    QuickEdit.copyDownFormatter.call(this, o)
 	});
 };
 
@@ -320,7 +223,7 @@ QuickEdit.textareaFormatter = function(o)
  * anchor tag.  Use this as the column's qeFormatter if the column
  * should not be editable in QuickEdit mode.
  *
- * @method Y.Plugin.QuickEdit.readonlyEmailFormatter
+ * @method readonlyEmailFormatter
  * @static
  */
 QuickEdit.readonlyEmailFormatter = function(o)
@@ -334,7 +237,7 @@ QuickEdit.readonlyEmailFormatter = function(o)
  * Use this as the column's qeFormatter if the column should not be
  * editable in QuickEdit mode.
  *
- * @method Y.Plugin.QuickEdit.readonlyLinkFormatter
+ * @method readonlyLinkFormatter
  * @static
  */
 QuickEdit.readonlyLinkFormatter = function(o)
@@ -342,52 +245,15 @@ QuickEdit.readonlyLinkFormatter = function(o)
 	return (o.value || '');		// don't need to check for zero
 };
 
-function getSiblingTdEl(
-	/* Node */	el,
-	/* int */	dir)
-{
-	var tr = null;
-	this._tbodyNode.get('children').some(function(node)
-	{
-		if (node.contains(el))
-		{
-			tr = node;
-			return true;
-		}
-	});
-
-	if (!tr)
-	{
-		return null;
-	}
-
-	var cell = el.getAncestorByTagName('td', true);
-
-	var col_index = -1;
-	tr.get('children').some(function(node, index)
-	{
-		if (node === cell)
-		{
-			col_index = index;
-			return true;
-		}
-	});
-
-	tr = (dir < 0 ? tr.previous() : tr.next());
-	return tr ? tr.get('children').item(col_index) : null;
-}
-
-/*
+/**
  * Copy value from first cell to all other cells in the column.
  *
  * @param e {Event} triggering event
- * @param cell {Node} cell from which to copy
  * @private
  */
-function copyDown(
-	/* event */	e,
-	/* Node */	cell)
+function copyDown(e)
 {
+	var cell  = e.currentTarget.ancestor('.yui3-datatable-cell');
 	var field = cell.one('.quickedit-field');
 	if (!field)
 	{
@@ -402,7 +268,7 @@ function copyDown(
 
 	while (1)
 	{
-		cell = getSiblingTdEl.call(this, cell, +1);
+		cell = this.getCell(cell, 'below');
 		if (!cell)
 		{
 			break;
@@ -416,26 +282,27 @@ function copyDown(
 	}
 }
 
-/*
- * Called with exactly the same arguments as a normal cell
- * formatter, this function inserts a "Copy down" button if the
- * cell is in the first row of the DataTable.  Call this at the end
- * of your QuickEdit formatter.
+/**
+ * Inserts a "Copy down" button if the cell is in the first row of the
+ * DataTable.  Call this at the end of your QuickEdit formatter.
  *
- * @method Y.Plugin.QuickEdit.copyDownFormatter
+ * @method copyDownFormatter
  * @static
+ * @param o {Object} cell formatter object
+ * @param td {Node} cell
  */
-QuickEdit.copyDownFormatter = function(o)
+QuickEdit.copyDownFormatter = function(o, td)
 {
-	if (o.column.get('quickEdit').copyDown && o.rowindex === 0)
+	if (o.column.quickEdit.copyDown && o.rowIndex === 0)
 	{
-		var button = Y.Node.create('<button></button>');
-		button.set('title', 'Copy down');
-		button.set('innerHTML', '&darr;');
-
-		o.td.insert(button, o.td.one('.' + QuickEdit.error_text_class));
-
-		button.on('click', copyDown, o.td, this);
+		return Y.Lang.sub('<button title="Copy down" class="{c}">&darr;</button>',
+		{
+			c: QuickEdit.copy_down_button_class
+		});
+	}
+	else
+	{
+		return '';
 	}
 };
 
@@ -443,18 +310,25 @@ function wrapFormatter(editFmt, origFmt)
 {
 	return function(o)
 	{
-		return (o.record ? editFmt : origFmt).apply(this, arguments);
+		if (!o.record && Y.Lang.isString(origFmt))
+		{
+			return origFmt;
+		}
+		else
+		{
+			return (o.record ? editFmt : origFmt).apply(this, arguments);
+		}
 	};
 }
 
-/*
+/**
  * Shift the focus up/down within a column.
  *
  * @private
  */
 function moveFocus(e)
 {
-	var cell = getSiblingTdEl.call(this, e.target, e.charCode == 38 ? -1 : +1);
+	var cell = this.getCell(e.target, e.charCode == 38 ? 'above' : 'below');
 	if (cell)
 	{
 		var input = cell.one('.quickedit-field');
@@ -467,7 +341,40 @@ function moveFocus(e)
 	}
 }
 
-/*
+/**
+ * Parse the column configuration for easy lookup.
+ */
+function parseColumns()
+{
+	var forest = this.get('host').get('columns');
+	var map    = {};
+
+	function accumulate(list, node)
+	{
+		if (Y.Lang.isString(node))
+		{
+			var col = { key: node };
+			list.push(col);
+			map[node] = col;
+		}
+		else if (node.children)
+		{
+			list = Y.reduce(node.children, list, accumulate);
+		}
+		else
+		{
+			list.push(node);
+			map[ node.key ] = node;
+		}
+
+		return list;
+	}
+
+	this.column_list = Y.reduce(forest, [], accumulate);
+	this.column_map  = map;
+}
+
+/**
  * Validate the given form fields.
  *
  * @param e {Array} Array of form fields.
@@ -478,14 +385,13 @@ function validateElements(
 	/* NodeList */ list)
 {
 	var host = this.get('host');
-	var cols = host.get('columnset').keyHash;
 
 	var status = true;
 	var count  = list.size();
 	for (var i=0; i<count; i++)
 	{
 		var e  = list.item(i);
-		var qe = cols[ this._getColumnKey(e) ].get('quickEdit');
+		var qe = this.column_map[ this._getColumnKey(e) ].quickEdit;
 		if (!qe)
 		{
 			continue;
@@ -528,7 +434,18 @@ Y.extend(QuickEdit, Y.Plugin.Base,
 {
 	initializer: function(config)
 	{
+		var host = this.get('host');
+
 		this.hasMessages = false;
+
+		parseColumns.call(this);
+		this.get('host').after('columnsChange', parseColumns, this);
+
+		var h = this.afterHostEvent('render', function()
+		{
+			host.get('boundingBox').delegate('click', copyDown, '.'+QuickEdit.copy_down_button_class, host);
+			h.detach();
+		});
 	},
 
 	/**
@@ -540,22 +457,20 @@ Y.extend(QuickEdit, Y.Plugin.Base,
 		this.fire('clearErrorNotification');
 
 		var host      = this.get('host');
-		var cols      = host.get('columnset').keys;
 		this.saveSort = [];
-		this.saveEdit = {};
+		this.saveEdit = [];
 		this.saveFmt  = {};
-		for (var i=0; i<cols.length; i++)
+		for (var i=0; i<this.column_list.length; i++)
 		{
-			var col = cols[i];
-			var key = col.get('key');
-			this.saveSort.push(col.get('sortable'));
-			col.set('sortable', false);
+			var col = this.column_list[i];
+			var key = col.key;
+			this.saveSort.push(col.sortable);
+			col.sortable = false;
+//			this.saveEdit.push(col.editor);
+//			col.editor = null;
 
-//			this.saveEdit[key] = col.editor;
-//			col.editor         = null;
-
-			var qe  = col.get('quickEdit');
-			var qef = col.get('qeFormatter');
+			var qe  = col.quickEdit;
+			var qef = col.qeFormatter;
 			if (/*!col.hidden &&*/ (qe || qef))
 			{
 				var fn = null;
@@ -574,10 +489,16 @@ Y.extend(QuickEdit, Y.Plugin.Base,
 
 				if (fn)
 				{
-					var origFmt       = col.get('formatter');
-					var fmt           = wrapFormatter.call(this, fn, origFmt);
-					this.saveFmt[key] = origFmt;
-					col.set('formatter', fmt);
+					this.saveFmt[key] =
+					{
+						formatter:     col.formatter,
+						nodeFormatter: col.nodeFormatter,
+						allowHTML:     col.allowHTML
+					};
+
+					col.formatter     = wrapFormatter.call(this, fn, col.formatter || col.nodeFormatter);
+					col.nodeFormatter = null;
+					col.allowHTML     = true;
 				}
 			}
 		}
@@ -586,7 +507,9 @@ Y.extend(QuickEdit, Y.Plugin.Base,
 		container.addClass(host.getClassName('quickedit'));
 		this.move_event_handle = container.on('key', moveFocus, 'down:38+ctrl,40+ctrl', host);
 
-		host.syncUI();
+		// trigger re-parsing of columns -- since we saved references to
+		// the column objects, the original forest has been modified :)
+		host.set('columns', host.get('columns'));
 	},
 
 	/**
@@ -598,24 +521,26 @@ Y.extend(QuickEdit, Y.Plugin.Base,
 	{
 		this.fire('clearErrorNotification');
 
-		var host = this.get('host');
-		var cols = host.get('columnset').keys;
-		for (var i=0; i<cols.length; i++)
+		for (var i=0; i<this.column_list.length; i++)
 		{
-			var col = cols[i];
-			col.set('sortable', this.saveSort[i]);
-//			col.set('editor', this.saveEdit[ col.key ]);
+			var col      = this.column_list[i];
+			col.sortable = this.saveSort[i];
+//			col.editor   = this.saveEdit[i];
 		}
 		delete this.saveSort;
 		delete this.saveEdit;
 
-		cols = host.get('columnset').keyHash;
-		Y.Object.each(this.saveFmt, function(fmt, key)
+		Y.each(this.saveFmt, function(fmt, key)
 		{
-			cols[key].set('formatter', fmt);
-		});
+			var col           = this.column_map[key];
+			col.formatter     = fmt.formatter;
+			col.nodeFormatter = fmt.nodeFormatter;
+			col.allowHTML     = fmt.allowHTML;
+		},
+		this);
 		delete this.saveFmt;
 
+		var host      = this.get('host');
 		var container = host.get('contentBox');
 		container.removeClass(host.getClassName('quickedit'));
 		if (this.move_event_handle)
@@ -624,7 +549,9 @@ Y.extend(QuickEdit, Y.Plugin.Base,
 			delete this.move_event_handle;
 		}
 
-		host.syncUI();
+		// trigger re-parsing of columns -- since we saved references to
+		// the column objects, the original forest has been modified :)
+		host.set('columns', host.get('columns'));
 	},
 
 	/**
@@ -647,13 +574,9 @@ Y.extend(QuickEdit, Y.Plugin.Base,
 		var alwaysInclude = this.get('changesAlwaysInclude');
 
 		var host      = this.get('host');
-		var records   = host.get('recordset');
 		var rows      = host._tbodyNode.get('children');
-		var row_count = rows.size();
-		var cols      = host.get('columnset').keyHash;
-		for (var i=0; i<row_count; i++)
+		host.get('data').each(function(rec, i)
 		{
-			var rec  = records.getRecord(i);
 			var list = rows.item(i).all('.quickedit-field');
 
 			var change = {};
@@ -664,9 +587,8 @@ Y.extend(QuickEdit, Y.Plugin.Base,
 			{
 				var field = list.item(j);
 				var key   = this._getColumnKey(field);
-				var col   = cols[key];
-				var qe    = col.get('quickEdit');
-				var prev  = rec.getValue(key);
+				var qe    = this.column_map[key].quickEdit;
+				var prev  = rec.get(key);
 
 				var val = Y.Lang.trim(field.get('value'));
 				if (qe.changed ? qe.changed(prev, val) :
@@ -679,9 +601,10 @@ Y.extend(QuickEdit, Y.Plugin.Base,
 			for (var j=0; j<alwaysInclude.length; j++)
 			{
 				var key     = alwaysInclude[j];
-				change[key] = rec.getValue(key);
+				change[key] = rec.get(key);
 			}
-		}
+		},
+		this);
 
 		return changes;
 	},
@@ -753,7 +676,7 @@ Y.extend(QuickEdit, Y.Plugin.Base,
 
 		e       = Y.one(e);
 		var row = e.getAncestorByTagName('tr');
-		if (statusTakesPrecendence(this._getElementStatus(row, qe_row_status_re), type))
+		if (Y.FormManager.statusTakesPrecedence(this._getElementStatus(row, qe_row_status_re), type))
 		{
 			if (!this.hasMessages && scroll)
 			{
@@ -765,7 +688,7 @@ Y.extend(QuickEdit, Y.Plugin.Base,
 		}
 
 		var cell = e.getAncestorByTagName('td');
-		if (statusTakesPrecendence(this._getElementStatus(cell, qe_cell_status_re), type))
+		if (Y.FormManager.statusTakesPrecedence(this._getElementStatus(cell, qe_cell_status_re), type))
 		{
 			if (msg)
 			{
@@ -813,4 +736,4 @@ Y.namespace("Plugin");
 Y.Plugin.DataTableQuickEdit = QuickEdit;
 
 
-}, 'gallery-2011.06.01-20-18' ,{skinnable:true, optional:['gallery-scrollintoview'], requires:['datatable-base','gallery-formmgr-css-validation','gallery-node-optimizations']});
+}, 'gallery-2012.04.04-17-55' ,{skinnable:true, optional:['gallery-scrollintoview'], requires:['datatable-base','gallery-formmgr-css-validation','gallery-node-optimizations','gallery-funcprog']});

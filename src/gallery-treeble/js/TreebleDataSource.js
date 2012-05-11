@@ -1,5 +1,9 @@
 "use strict";
 
+/**
+ * @module gallery-treeble
+ */
+
 /**********************************************************************
  * <p>Hierarchical data source.</p>
  *
@@ -9,13 +13,14 @@
  * paginateChildren:true.</p>
  * 
  * <p>The tree must be immutable.  The total number of items available from
- * each DataSource must remain constant.</p>
+ * each DataSource must remain constant.  (The one exception to this rule
+ * is that filtering and sorting are allowed.  This is done by detecting
+ * that the request parameters have changed.)</p>
  * 
- * @module gallery-treeble
  * @class TreebleDataSource
  * @extends DataSource.Local
  * @constructor
- * @param config {Object} Widget configuration
+ * @param config {Object}
  */
 
 function TreebleDataSource()
@@ -470,7 +475,7 @@ function getVisibleSlicesPgAll(
 			var info = getVisibleSlicesPgAll(skip, show, rootDS, node.children,
 											 path.concat(node.index),
 											 node, pre+n, send, slices);
-			if (info instanceof Array)
+			if (Y.Lang.isArray(info))
 			{
 				return info;
 			}
@@ -580,7 +585,7 @@ function findRequest(
 function treeSuccess(e, reqIndex)
 {
 	if (!e.response || e.error ||
-		!(e.response.results instanceof Array))
+		!Y.Lang.isArray(e.response.results))
 	{
 		treeFailure.apply(this, arguments);
 		return;
@@ -708,7 +713,7 @@ function checkFinished()
 	}
 	else if (this._toggle.length > 0)
 	{
-		this.toggle(this._toggle[0], Y.clone(this._callback.request),
+		this.toggle(this._toggle[0], Y.clone(this._callback.request, true),
 		{
 			fn: function()
 			{
@@ -719,8 +724,8 @@ function checkFinished()
 		return;
 	}
 
-	var response = {};
-	Y.mix(response, this._topResponse);
+	var response = { meta:{} };
+	Y.mix(response, this._topResponse, true);
 	response.results = [];
 	response         = Y.clone(response, true);
 
@@ -911,6 +916,8 @@ Y.extend(TreebleDataSource, Y.DataSource.Local,
 	{
 		if (this._callback)
 		{
+			// wipe out all state if the request parameters change
+
 			Y.Object.some(this._callback.request, function(value, key)
 			{
 				if (key == 'startIndex' || key == 'resultCount')
@@ -934,6 +941,7 @@ Y.extend(TreebleDataSource, Y.DataSource.Local,
 	{
 		this._req    = [];
 		this._toggle = [];
+		delete this._topResponse;
 	}
 });
 
@@ -944,7 +952,8 @@ Y.TreebleDataSource = TreebleDataSource;
  * <code>dataType</code> and <code>liveData</code>, or it can be <q>free
  * form</q>, e.g., an array of records or an XHR URL.</p>
  *
- * @method Y.Parsers.treebledatasource
+ * @namespace Parsers
+ * @method treebledatasource
  * @param oData {mixed} Data to convert.
  * @return {DataSource} The new data source.
  * @static
