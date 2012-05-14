@@ -3,39 +3,38 @@
  * Code licensed under the BSD License:
  * http://developer.yahoo.net/yui/license.txt
  */
+(function (Y) {
 var CLASS_NAME = 'NodeUtils',
     NodeUtils = Y.namespace("Binding." + CLASS_NAME);
-    
 /**
- * Returns the node informations which may be used for further work in the binding
+ * Returns the node information which may be used for further work in the data binding.
  * <br>
- * <code>{nodeName: nodeName, nodeType: nodeType, widget: the Widget if it is one}</code>
+ * <code>{nodeName: nodeName, nodeType: nodeType, widget: the Widget 'iswidget' is set to true on the HTML node}</code>
  * @param {Node|String} node the Node to inspect
  * @return {nodeName: nodeName, nodeType: nodeType, widget: widget}
  */
-NodeUtils.inspectNode = function(node) {
+NodeUtils.inspect = function(node) {
     if (!node) {
+        Y.log("Couldn't find any node with selector-->" + node, "warn", CLASS_NAME);
         return null;
-    } else if (Lang.isString(node)) {
+    } else if (Y.Lang.isString(node)) {
         node = Y.one(node);
     }
 
     var nodeName = NodeUtils.getNormalizedValue(node, 'nodeName'),
         nodeType = NodeUtils.getNormalizedValue(node, 'type'),
-        isWidget = node.getAttribute('iswidget'),
-        widget = null;
-
-    if (isWidget == 'true') widget = Y.Widget.getByNode(node);
+        isWidget = (node.getAttribute('iswidget') == 'true'),
+        widget = isWidget ? Y.Widget.getByNode(node) : null;
     
     if (nodeName) {
-        if (Lang.isString(nodeType) && nodeType.length > 0) {
+        if (Y.Lang.isString(nodeType) && nodeType.length > 0) {
             nodeType = nodeName + '_' + nodeType;
         } else {
             nodeType = nodeName;
         }
     }
     return {nodeName: nodeName, nodeType: nodeType, widget: widget, node: node};
-};
+}
 
 /**
  * Returns the normalized value of the node (lower case strings).
@@ -53,4 +52,5 @@ NodeUtils.getNormalizedValue = function(node, name) {
         value = value.toLowerCase();
     }
     return value;
-};
+}
+})(Y);

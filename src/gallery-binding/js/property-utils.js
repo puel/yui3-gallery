@@ -3,11 +3,9 @@
  * Code licensed under the BSD License:
  * http://developer.yahoo.net/yui/license.txt
  */
+(function (Y) {
 var CLASS_NAME = 'PropertyUtils',
-    PropertyUtils = Y.namespace("Binding." + CLASS_NAME),
-    Lang = Y.Lang,
-    Base = Y.Base,
-    Widget = Y.Widget;
+    PropertyUtils = Y.namespace("Binding." + CLASS_NAME);
 
 /**
  * As we fight always some different patch we have this normalize.
@@ -27,7 +25,7 @@ PropertyUtils.cleanPath = function (path) {
         }
     }
     return result;
-};
+}
 
 /**
  * Returns the first chunk of the path
@@ -36,7 +34,7 @@ PropertyUtils.cleanPath = function (path) {
  */
 PropertyUtils.pathStart = function(path) {
     return PropertyUtils.cleanPath(path)[0];
-};
+}
 
 /**
  * This method allows you to access any property of a
@@ -50,32 +48,32 @@ PropertyUtils.pathStart = function(path) {
  */
 PropertyUtils.getProperty = function(object, dataPath){
     var result = object, path, i;
-    if (Lang.isString(dataPath) && dataPath.length > 0) {
+    if (Y.Lang.isString(dataPath) && dataPath.length > 0) {
         path = PropertyUtils.cleanPath(dataPath);
         // navigate to the desired point
-        for (i = 0; i < path.length && Lang.isValue(result); ++i) {
+        for (i = 0; i < path.length && Y.Lang.isValue(result); ++i) {
             result = result[path[i]];
         }
     } else {
         Y.log('getProperty: path is not a String, or empty!', 'warn', CLASS_NAME);
     }
     return result;
-};
+}
 
 /**
  * This function allows you to set any value by using the point notation.
  * <br>
- * e.g. foo.person.adress.street = some object
+ * e.g. foo.person.address.street = some object
  *
  * @param {Object} the obj where the property should be set, or null
- * @param {String} dataPath e.g. obj.person.adress.street
+ * @param {String} dataPath e.g. obj.person.address.street
  * @param {Object} value some value which should be set
  * @return {Object} the given object with the set value
  */
 PropertyUtils.setProperty = function(object, dataPath, value){
     var result = object || {}, path, current, i, buildTo;
     
-    if (Lang.isString(dataPath) && dataPath.length > 0) {
+    if (Y.Lang.isString(dataPath) && dataPath.length > 0) {
         path = dataPath.split('.');
         current = result;
         // navigate to the desired object
@@ -102,4 +100,5 @@ PropertyUtils.setProperty = function(object, dataPath, value){
         result = value;
     }
     return result;
-};
+}
+})(Y);

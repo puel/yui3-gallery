@@ -2,11 +2,14 @@
 <html>
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-        <title>Insert title here</title>
-        <script src="http://yui.yahooapis.com/3.5.0/build/yui/yui.js" charset="utf-8"></script>
+        <link href="http://yui.yahooapis.com/3.5.1/build/cssreset/cssreset.css" rel="stylesheet">
+        <link href="http://yui.yahooapis.com/3.5.1/build/cssfonts/cssfonts.css" rel="stylesheet">
+        <link href="http://yui.yahooapis.com/3.5.1/build/cssgrids/cssgrids.css" rel="stylesheet">
+        <link href="http://yui.yahooapis.com/3.5.1/build/cssbase/cssbase.css" rel="stylesheet">
+        <script src="http://yui.yahooapis.com/3.5.1/build/yui/yui.js" charset="utf-8"></script>
         <script src="../build_tmp/gallery-binding-debug.js"></script>
     </head>
-    <body>
+    <body class="yui3-skin-sam">
         <div id="form1">
             Name: <input id="txtName">
             Last name: <input bind="person.lastName">
@@ -21,9 +24,9 @@
                 <option value="true">Male</option>
                 <option value="false">Female</option>
             </select>
-            <button type="button" bind="person.lastName"></button>
+            <button type="button" bind="person.lastName" class="yui3-button"></button>
             <br>
-            <button type="button" id="cmdDestroy">Destroy all bindings and Nodes in this area</button>
+            <button type="button" id="cmdDestroy" class="yui3-button">Destroy all bindings and Nodes in this area</button>
         </div>
         <hr />
         <textarea id="all" cols="100" rows="10"></textarea><br>
@@ -43,10 +46,10 @@
                 
                 // come control values
                 var all = Y.one('#all'), path = Y.one('#path'), newValue = Y.one('#newValue');
-                binding.after(Y.Binding.DataBinding.Event.NewValueSet, function(e) {
+                binding.after(Y.Binding.DataBinding.Event.Change, function(e) {
                     all.set('value', Y.dump(binding.getData()));
-                    path.setContent(e.path);
-                    newValue.setContent(e.value);
+                    path.setContent(e.attrName); // or e.path
+                    newValue.setContent(e.newVal);
                 });
                 
                 all.set('value', Y.dump(binding.getData()));

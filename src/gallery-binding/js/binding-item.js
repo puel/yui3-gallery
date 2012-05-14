@@ -3,12 +3,13 @@
  * Code licensed under the BSD License:
  * http://developer.yahoo.net/yui/license.txt
  */
+(function (Y) {
 Y.namespace('Binding');
 
 /**
- * The bind item class is a wrapper for any bind property. We wrapp it here also
- * to itercept nice stuff like Node destroys - this object is now a base object with
- * a destroy propery - which allows us later to act more correct.
+ * The bind item class is a wrapper for any bind property. We wrap it here also
+ * to intercept nice stuff like Node destroys - this object is now a base object with
+ * a destroy property - which allows us later to act more correct.
  * 
  * @param {Object} config
  * @class BindingItem
@@ -34,7 +35,7 @@ BindingItem.ATTRS = {
     element: {
         value: null,
         setter: function(value){
-            if (Lang.isString(value)) {
+            if (Y.Lang.isString(value)) {
                 value = Y.one(value);
             }
             return value;
@@ -49,10 +50,10 @@ BindingItem.ATTRS = {
      */
     property: {
         value: null,
-        validator: Lang.isString
+        validator: Y.Lang.isString
     },
     /**
-     * The path in the binding widget to popualte
+     * The path in the binding widget to populate
      * 
      * @type String
      * @default null
@@ -60,7 +61,7 @@ BindingItem.ATTRS = {
      */
     path: {
         value: null,
-        validator: Lang.isString
+        validator: Y.Lang.isString
     },
     /**
      * The event to react on to harvest any changes from the bind element
@@ -71,7 +72,7 @@ BindingItem.ATTRS = {
      */
     event: {
         value: null,
-        validator: Lang.isString
+        validator: Y.Lang.isString
     },
     /**
      * Each binding may have a converter
@@ -80,7 +81,7 @@ BindingItem.ATTRS = {
      * @default null
      * @attribute converter
      */
-    converter: {value: null, validator: Lang.isFunction},
+    converter: {value: null, validator: Y.Lang.isFunction},
     /** 
      * YUI bind handle, used in the detach method.
      * As YUI still does not correctly detach events we need to store the
@@ -101,10 +102,10 @@ Y.extend(BindingItem, Y.Base, {
     initializer: function(config){
         try {
             // TODO: destroy method hook -> as YUI does not correctly always fire the
-            // destroy event e.g. Nodes - so we better instrument the destroy method
+            // destroy event e.g. for Nodes - so we better instrument the destroy method
             // this.bind();
             var element = this.get('element');
-            if (Lang.isFunction(element.destroy)) {
+            if (Y.Lang.isFunction(element.destroy)) {
                 Y.Do.before(this.destroy, element, 'destroy', this);
             } else {
                 Y.log('Do destroy method fond on element-> ' + config.element +
@@ -114,6 +115,7 @@ Y.extend(BindingItem, Y.Base, {
             Y.log('failed to create a new binded item ' + e, 'error', BindingItem.NAME);
         }
     },
+
     destructor: function() {
         Y.log('Binding destroyed of: ' + this.get('element'), 'debug', BindingItem.NAME);
         this.detach();
@@ -165,7 +167,7 @@ Y.extend(BindingItem, Y.Base, {
         }
 
         if (element instanceof Y.Node) {
-            if (!Lang.isValue(value)) {
+            if (!Y.Lang.isValue(value)) {
                 value = "";
             } else {
                 // escape for innerHTML - to avoid JS injection
@@ -180,7 +182,7 @@ Y.extend(BindingItem, Y.Base, {
 
 //            // check if the widget has transformed the value somehow
 //            var widgetValue = element.get(property);
-//            if (widgetValue != value && (Lang.isValue(widgetValue) || Lang.isValue(value))) {
+//            if (widgetValue != value && (Y.Lang.isValue(widgetValue) || Y.Lang.isValue(value))) {
 //                Y.log('The set value has been transformed by --> ' +
 //                     element + ' - to --> ' + widgetValue +
 //                     ' setting back to datastore', 'info', BindingItem.NAME);
@@ -203,9 +205,10 @@ Y.extend(BindingItem, Y.Base, {
             this.getValue(), 
             this.get('path'),
             false,
-            this);
+            this
+        );
     }
 });
 
 Y.Binding.BindingItem = BindingItem;
-
+})(Y);

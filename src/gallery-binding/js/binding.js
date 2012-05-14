@@ -3,7 +3,14 @@
  * Code licensed under the BSD License:
  * http://developer.yahoo.net/yui/license.txt
  */
-Y.namespace('Binding');
+(function (Y) {
+var BindingItem = Y.Binding.BindingItem,
+    PropertyUtils = Y.Binding.PropertyUtils,
+    NodeUtils = Y.Binding.NodeUtils,
+    CLASS_NAME = 'Binding';
+
+Y.namespace(CLASS_NAME);
+
 
 /**
  * DataBinding class constructor 
@@ -11,7 +18,6 @@ Y.namespace('Binding');
  * @extends Base
  * @namespace Y.Binding
  * @constructor
- * @param ds global scope patch - work in progress
  */
 function DataBinding(config){
     DataBinding.superclass.constructor.apply(this, arguments);
@@ -56,9 +62,7 @@ DataBinding.DefaultBinding = {
     }
 };
     
-DataBinding.NAME = "binding";
-/** Global DS BETA only a JS object */
-DataBinding.GlobalDs = {};
+DataBinding.NAME = CLASS_NAME;
 
 DataBinding.Event = {
     /** 
@@ -67,21 +71,26 @@ DataBinding.Event = {
      *
      * Each code may set new data in the "silent" mode which suppresses this event.
      *
-     * @event Y.Binding.Binding.Event.NewValueSet
-     * @param <b>path, value</b>
+     * In addition to this generic "change" event
+     *
+     * @event Y.Binding.Binding.Event.Change
+     * @param <b>path, newValue, prefVal</b>
      */
-    NewValueSet: 'new-value-set',
-    
-    NodeToBindFound: "node-to-bind-found"
+    Change: 'change',
+    /**
+     * Fired for each node discovered during the "autoBind"
+     */
+    NodeToBindFound: "node-to-bind-found",
+    /**
+     * Event fired then a new element is bind
+     */
+    Bind: 'bind'
 };
 
 DataBinding.ATTRS = {
-    /** String name of the globa DS to use them in the local scope */
-    ds: {
-        value: null
-    }
+
 };
-Y.extend(DataBinding, Base, {
+Y.extend(DataBinding, Y.Base, {
     _localDs: null,
 
     _bindingMap: null,
@@ -89,32 +98,23 @@ Y.extend(DataBinding, Base, {
      * @private
      */
     initializer: function() {
-        var ds = this.get('ds');
-        if (ds) {
-            if (!DataBinding.GlobalDs[ds]) {
-                DataBinding.GlobalDs[ds] = this._localDs = {};
-            } else {
-                this._localDs = DataBinding.GlobalDs[ds];
-            }
-            Y.log("New binding in Global scope --> " + ds, "debug", DataBinding.NAME);
-        } else {
-            this._localDs = {};
-            Y.log("New binding in local scope.", "debug", DataBinding.NAME);
-        }
         this._bindingMap = {};
+        this._localDs = {};
         
-        this.publish(DataBinding.Event.NewValueSet, {emitFacade: true,
-                defaultFn: this._refreshWidgetsHandler, context: this});
-        this.publish(DataBinding.Event.NodeToBindFound, {emitFacade: true,
-            defaultFn: function(e) {this.bind(e.node);}, context: this});
+        this.publish(DataBinding.Event.Change, {
+            emitFacade: true,
+            defaultFn: this._refreshWidgetsHandler, context: this}
+        );
+        this.publish(DataBinding.Event.NodeToBindFound, {
+            emitFacade: true,
+            defaultFn: function(e) {this.bind(e.node);}, context: this}
+        );
     },
     /**
      * @private
      */
     destructor: function() {
         var key, bindings, i;
-        
-        this._localDs = null;
         this.detachAll();
         if (this._bindingMap) {
             for (key in this._bindingMap) {
@@ -122,7 +122,7 @@ Y.extend(DataBinding, Base, {
                 if (Y.Lang.isArray(bindings)) {
                     for (i = bindings.length - 1; i >= 0; i--){
                         bindings[i].destroy();
-                    };
+                    }
                 }
             }
         }
@@ -130,7 +130,7 @@ Y.extend(DataBinding, Base, {
     },
     
     bindAll: function(node) {
-        if (Lang.isString(node)) {
+        if (Y.Lang.isString(node)) {
             node = Y.one(node);
         }
         if (node.hasChildNodes()) {
@@ -149,24 +149,25 @@ Y.extend(DataBinding, Base, {
      * @param {Object} element
      */
     bind: function (element) {
-        if (Lang.isString(element)) {
+        var nodeInfo, bindingPath, attribute, event, nodeName, nodeType, converter;
+        if (Y.Lang.isString(element)) {
             element = Y.one(element);
             if (!element) {
-                Y.log("Couldn't find any node with selector: " + element, "warn", DataBinding.NAME);
+                Y.log("Couldn't find any node with selector: " + element, "warn", CLASS_NAME);
                 return null;
             }
         }
-        var bindingPath = element.getAttribute('bind');
+        bindingPath = element.getAttribute('bind');
         
         if (bindingPath != "" && bindingPath.length > 0) {
-            var nodeInfo = NodeUtils.inspectNode(element);
+            nodeInfo = NodeUtils.inspect(element);
             if (nodeInfo) {
-                var attribute = nodeInfo.node.getAttribute('bindAttribute'),
-                    event = nodeInfo.node.getAttribute('bindEvent'),
-                    nodeInfo = NodeUtils.inspectNode(element),
-                    nodeName = nodeInfo.nodeName,
-                    nodeType = nodeInfo.nodeType,
-                    converter = null;
+                attribute = nodeInfo.node.getAttribute('bindAttribute');
+                event = nodeInfo.node.getAttribute('bindEvent');
+                nodeName = nodeInfo.nodeName;
+                nodeType = nodeInfo.nodeType;
+                converter = null;
+
                 // replace the node with the widget
                 if (nodeInfo.widget) {
                     element = nodeInfo.widget;
@@ -175,12 +176,13 @@ Y.extend(DataBinding, Base, {
                     element = nodeInfo.node;
                 }
                 if (nodeName) {
-                    Y.log('Using default for ' + element + ' which is a ' + nodeName + ' accurat a ' + nodeType, 'debug', DataBinding.NAME);
+                    Y.log('Using default for ' + element + ' which is a ' + nodeName + ' accurate a ' + nodeType, 'debug', DataBinding.NAME);
                     // use first the accurate name then the generic name
                     if (!event) event = DataBinding.DefaultBinding.Events[nodeType];
                     if (!event) event = DataBinding.DefaultBinding.Events[nodeName];
                     if (!attribute) attribute = DataBinding.DefaultBinding.Attributes[nodeType];
                     if (!attribute) attribute = DataBinding.DefaultBinding.Attributes[nodeName];
+                    // resolve converter
                     converter = DataBinding.DefaultBinding.Converter[nodeType];
                     if (!converter) converter = DataBinding.DefaultBinding.Converter[nodeName];
                 } else if (nodeInfo.widget) {
@@ -189,8 +191,8 @@ Y.extend(DataBinding, Base, {
                     Y.log('No node name found for ' + element, 'warn', DataBinding.NAME);
                 }
                 // fall back check
-                if (!attribute || !Lang.isString(attribute) || attribute.length < 1) {
-                    attribute = 'innerHTML';
+                if (!attribute || !Y.Lang.isString(attribute) || attribute.length < 1) {
+                    attribute = 'text';
                 }
 
                 this.bindProperty(element, attribute, bindingPath, event, converter);
@@ -203,25 +205,28 @@ Y.extend(DataBinding, Base, {
     },
 
     /**
-     * Binds one propery to a path
+     * Binds one property to a path
      * 
      * @param {Base|Node|String} element the base object or node to bind
-     * @param {String} property the property which is accessable with get and set
+     * @param {String} property the property which is access able with get and set
      * @param {String} path the path to use in the DS
      * @param {String} event the event to listen too, empty string "" - read only binding
      * @param {Function} converter a value converter function if needed, executed on set
      */
     bindProperty: function(element, property, path, event, converter){
-        if (element && Lang.isString(property) && Lang.isString(path) && (!event || Lang.isString(event))) {
+        if (element && Y.Lang.isString(property) && Y.Lang.isString(path) && (!event || Y.Lang.isString(event))) {
             var domain = PropertyUtils.pathStart(path),
                 i = new BindingItem({
-                element: element,
-                property: property,
-                path: path,
-                event: event,
-                converter: converter,
-                binding: this
-            });
+                    element: element,
+                    property: property,
+                    path: path,
+                    event: event,
+                    converter: converter,
+                    binding: this
+                }),
+                dataValue,
+                elementValue
+            ;
             if (!this._bindingMap[domain]) {
                 this._bindingMap[domain] = [];
             }
@@ -235,13 +240,13 @@ Y.extend(DataBinding, Base, {
                 + ' event--> ' + event, 'info', DataBinding.NAME);
             
             // set the initial data
-            var dataValue = this.getData(path),
-                elementValue = i.getValue();
+            dataValue = this.getData(path);
+            elementValue = i.getValue();
             
             // we use the DS value if we have something
-            if (Lang.isValue(dataValue)) {
+            if (Y.Lang.isValue(dataValue)) {
                 i.updateElement(this.getData(path));
-            } else if (Lang.isValue(elementValue)) {
+            } else if (Y.Lang.isValue(elementValue)) {
                 Y.log('Using element value: "' + elementValue + 
                     '" from ' + element + ' as start value.',
                     'info', DataBinding.NAME);
@@ -269,21 +274,25 @@ Y.extend(DataBinding, Base, {
      * @param {Boolean} silent if a update should be triggered?
      */
     setData: function(value, path, silent, binding) {
-        if (!Lang.isBoolean(silent)) {
+        var oldValue, eventObj;
+        if (!Y.Lang.isBoolean(silent)) {
             silent = false;
         }
-        if (Lang.isString(path)) {
-            var oldValue = PropertyUtils.getProperty(this._localDs, path);
+        if (Y.Lang.isString(path)) {
+            oldValue = PropertyUtils.getProperty(this._localDs, path);
             
             // do only if we have really a change
-            if (oldValue !== value && (Lang.isValue(oldValue) || Lang.isValue(value))) {
+            if (!Y.Lang.isObject(value) && oldValue !== value && (Y.Lang.isValue(oldValue) || Y.Lang.isValue(value))) {
+
                 PropertyUtils.setProperty(this._localDs, path, value);
                 if (!silent) {
-                    this.fire(DataBinding.Event.NewValueSet, {value: value, path: path, binding: binding});
+                    eventObj = {newVal: value, prevVal: oldValue, attrName: path, path: path, binding: binding};
+                    this.fire(path, eventObj);
+                    this.fire(DataBinding.Event.Change, eventObj);
                 }
             }
         } else {
-            Y.log("setData: Path is not a string!" , "warn", DataBinding.NAME);
+            Y.log("setData: Path is not a string!" , "warn", CLASS_NAME);
         }
     },
     
@@ -295,8 +304,8 @@ Y.extend(DataBinding, Base, {
      */
     getData: function(path) {
         var result = this._localDs;
-        if (Lang.isString(path)) {
-            result = PropertyUtils.getProperty(result, path, result);
+        if (Y.Lang.isString(path)) {
+            result = PropertyUtils.getProperty(result, path);
         }
         return result;
     },
@@ -305,15 +314,16 @@ Y.extend(DataBinding, Base, {
         var domainPath = PropertyUtils.pathStart(e.path),
             bindingToIgnore = e.binding,
             bindings = this._bindingMap[domainPath],
-            binding = null;
+            binding = null,
+            i;
         
-        if (Lang.isArray(bindings)) {
-            Y.log('Updateting--> ' + bindings.length + ' widgets for path--> ' + e.path, 'debug', DataBinding.NAME);
-            for (var i = 0; i < bindings.length; ++i){
+        if (Y.Lang.isArray(bindings)) {
+            Y.log('Updateting--> ' + bindings.length + ' widgets for path--> ' + e.path, 'debug', CLASS_NAME);
+            for (i = 0; i < bindings.length; ++i){
                 binding = bindings[i];
                 if (binding.get('destroyed') === false) {
                     if (binding.get('path') === e.path && bindingToIgnore != binding) {
-                        binding.updateElement(e.value);
+                        binding.updateElement(e.newVal);
                     }
                 } else {
                     // remove it, if it is destroyed.
@@ -326,3 +336,4 @@ Y.extend(DataBinding, Base, {
     }
 });
 Y.Binding.DataBinding = DataBinding;
+})(Y);
