@@ -34,7 +34,7 @@ NodeUtils.inspect = function(node) {
         }
     }
     return {nodeName: nodeName, nodeType: nodeType, widget: widget, node: node};
-}
+};
 
 /**
  * Returns the normalized value of the node (lower case strings).
@@ -52,5 +52,5 @@ NodeUtils.getNormalizedValue = function(node, name) {
         value = value.toLowerCase();
     }
     return value;
-}
+};
 })(Y);

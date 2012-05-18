@@ -25,7 +25,7 @@ PropertyUtils.cleanPath = function (path) {
         }
     }
     return result;
-}
+};
 
 /**
  * Returns the first chunk of the path
@@ -34,7 +34,7 @@ PropertyUtils.cleanPath = function (path) {
  */
 PropertyUtils.pathStart = function(path) {
     return PropertyUtils.cleanPath(path)[0];
-}
+};
 
 /**
  * This method allows you to access any property of a
@@ -58,7 +58,7 @@ PropertyUtils.getProperty = function(object, dataPath){
         Y.log('getProperty: path is not a String, or empty!', 'warn', CLASS_NAME);
     }
     return result;
-}
+};
 
 /**
  * This function allows you to set any value by using the point notation.
@@ -100,5 +100,5 @@ PropertyUtils.setProperty = function(object, dataPath, value){
         result = value;
     }
     return result;
-}
+};
 })(Y);

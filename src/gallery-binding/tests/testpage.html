@@ -10,16 +10,18 @@
         <script src="../build_tmp/gallery-binding-debug.js"></script>
     </head>
     <body class="yui3-skin-sam">
+        <h1>Simple Binding Sample</h1>
+
         <div id="form1">
-            Name: <input id="txtName">
-            Last name: <input bind="person.lastName">
+            Name: <input type="text" id="txtName">
+            Last name: <input type="text" bind="person.lastName">
             Male: <input type="checkbox" bind="person.sex">
         </div>
         <hr />
         <i>Second Inputs bind to the same path - simply as show case</i>
         <div id="form2">
-            <input bind="person.name"> --> In span <span bind="person.name"></span>
-            <input bind="person.lastName"> --> In span <span bind="person.lastName"></span>
+            <input type="text" bind="person.name"> --> In span <span bind="person.name"></span>
+            <input type="text" bind="person.lastName"> --> In span <span bind="person.lastName"></span>
             <select bind="person.sex"> --> In span <span bind="person.sex"></span>
                 <option value="true">Male</option>
                 <option value="false">Female</option>
@@ -34,36 +36,36 @@
         <b>Path:</b> <span id="path"></span> <b>New value:</b> <span id="newValue"></span>
         <hr />
         <script>
-            YUI({filter: 'raw'}).use('gallery-binding', 'dump', 'event', function(Y) {
-                Y.log('start ...');
-                var binding = new Y.Binding.DataBinding();
-                // binding anything by hand
-                binding.bindProperty('#txtName', 'value', 'person.name', 'change');
-                
-                // use auto bind
-                binding.bindAll('#form1');
-                binding.bindAll('#form2');
-                
-                // come control values
-                var all = Y.one('#all'), path = Y.one('#path'), newValue = Y.one('#newValue');
-                binding.after(Y.Binding.DataBinding.Event.Change, function(e) {
-                    all.set('value', Y.dump(binding.getData()));
-                    path.setContent(e.attrName); // or e.path
-                    newValue.setContent(e.newVal);
-                });
-                
-                all.set('value', Y.dump(binding.getData()));
-                
-                Y.one('#cmdDestroy').on('click', function(e) {
-                    // well YUI is not able to destory simply subnodes
-                    // means we need to code this on our own here:
-                    Y.one('#form2').get('children').each(function (node) {
-                        node.destroy();
-                    });
-                    
-                    Y.one('#form2').setAttribute('style', 'background-color: red');
-                });
-            });
+YUI({filter: 'raw'}).use('gallery-binding', 'dump', 'event', 'cssbutton', function(Y) {
+    Y.log('start ...');
+    var binding = new Y.Binding.DataBinding();
+    // binding anything by hand
+    binding.bindProperty('#txtName', 'value', 'person.name', 'change');
+    
+    // use auto bind
+    binding.bindAll('#form1');
+    binding.bindAll('#form2');
+    
+    // come control values
+    var all = Y.one('#all'), path = Y.one('#path'), newValue = Y.one('#newValue');
+    binding.after(Y.Binding.DataBinding.Event.Change, function(e) {
+        all.set('value', Y.dump(binding.getData()));
+        path.setContent(e.attrName); // or e.path
+        newValue.setContent(e.newVal);
+    });
+    
+    all.set('value', Y.dump(binding.getData()));
+    
+    Y.one('#cmdDestroy').on('click', function(e) {
+        // well YUI is not able to destroy simply sub nodes
+        // means we need to code this on our own here:
+        Y.one('#form2').get('children').each(function (node) {
+            node.destroy();
+        });
+        
+        Y.one('#form2').setAttribute('style', 'background-color: red');
+    });
+});
         </script>
     </body>
 </html>
