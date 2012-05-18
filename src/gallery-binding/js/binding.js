@@ -270,8 +270,9 @@
         /**
          * Set a new value into the internal data store
          * @param {Object} value the value to set
-         * @param {String} path the path to use
-         * @param {Boolean} silent if a update should be triggered?
+         * @param {String} path the path to use (optional)
+         * @param {Boolean} silent if a update should be triggered, all events are suppressed? (optional = default false)
+         * @param {BindingItem} binding the binding to ignore (optional)
          */
         setData: function(value, path, silent, binding) {
             var oldValue, eventObj;
@@ -293,6 +294,24 @@
                 }
             } else {
                 Y.log("setData: Path is not a string!" , "warn", CLASS_NAME);
+            }
+        },
+        
+        /**
+         * Parses the given String to an JSON object and sets it into the internal data store.
+         * 
+         * @param jsonString  
+         * @param {String} path the path to use (optional)
+         * @param {Boolean} silent if a update should be triggered, all events are suppressed? (optional = default false)
+         * @param {BindingItem} binding the binding to ignore (optional)
+         */
+        setJson: function (jsonString, path, silent, binding) {
+            if (Y.Lang.isString(jsonString)) {
+                var data = Y.JSON.parse(jsonString);
+                this.setData(data, path, silent, binding);
+                return data;
+            } else {
+                throw "Expected String to be parsed to JSON but was--> " + jsonString;
             }
         },
 
